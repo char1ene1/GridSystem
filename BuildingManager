@@ -1,0 +1,123 @@
+using UnityEngine;
+using UnityEngine.UI;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
+using UnityEngine.Rendering;
+using System;
+using Unity.VisualScripting;
+public class BuildingManager : MonoBehaviour
+{
+    public GameObject[] objects; //List of prefabs 
+    private GameObject pendingObject;  //preview of th object before placing
+    private Vector3 pos; 
+    private RaycastHit hit; // its on the objects so they can collide 
+    [SerializeField] private LayerMask layerMask; //filters what the raaycast can hit
+    private Camera cam;
+
+    private float GridSize = 0.5f;
+    bool gridOn = true; //to make sure snapping is enabled
+    [SerializeField] private Toggle gridToggle; // UI toggle
+    [SerializeField] private float rotateAmount = 90; 
+    
+
+    private void Awake()
+    {
+        cam = Camera.main;
+        if (gridToggle != null) //if grid toggle is not empty in the inspector, run next line 
+            gridOn = gridToggle.isOn;
+    }
+    void Update()
+    {
+
+        Vector2 mPos = Mouse.current.position.ReadValue();// gets current mouse position on screen 
+        Ray ray = cam.ScreenPointToRay(mPos);
+
+        if (Physics.Raycast(ray, out hit, 1000f, layerMask))
+        {
+            pos = hit.point; //its saves information about the hit, hit point keeps the object in place 
+        }
+        if (pendingObject != null)
+        {
+            if (gridOn)
+            {
+                pendingObject.transform.position = new Vector3(
+                    RoundToNearestGrid(pos.x),
+                    RoundToNearestGrid(pos.y),    //if grid is on it'll snap to grid 
+                    RoundToNearestGrid(pos.z)
+                    );
+            }                          
+            else
+            {
+                pendingObject.transform.position = pos; //if grid is off it'll follow mouse freely
+            }
+            if(Mouse.current.leftButton.wasPressedThisFrame && !IsPointerOverUI())
+            {
+                PlaceObject();
+            }
+            if (Keyboard.current.rKey.wasPressedThisFrame)
+            {
+                RotateObject();//rotates on Y axis 90
+            }
+        }
+
+        if (Keyboard.current.digit1Key.wasPressedThisFrame) SelectObject(0); 
+        if (Keyboard.current.digit2Key.wasPressedThisFrame) SelectObject(1);
+        if (Keyboard.current.digit3Key.wasPressedThisFrame) SelectObject(2);
+        if (Keyboard.current.digit3Key.wasPressedThisFrame) SelectObject(3);
+        if (Keyboard.current.digit3Key.wasPressedThisFrame) SelectObject(4);
+        if (Keyboard.current.digit3Key.wasPressedThisFrame) SelectObject(5);
+        if (Keyboard.current.digit3Key.wasPressedThisFrame) SelectObject(6);
+        if (Keyboard.current.digit3Key.wasPressedThisFrame) SelectObject(7);
+    }
+
+    private bool IsPointerOverUI()
+    {
+        return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject(); //checks if mouse is currently over a Ui button
+    }
+
+    public void PlaceObject() //when objecct is placed, dont show, nd its placing a permnent copy of object
+    {
+        if(pendingObject != null)
+        {
+            Instantiate(pendingObject, pendingObject.transform.position, pendingObject.transform.rotation);
+
+            Destroy(pendingObject);
+            pendingObject = null;
+        }
+    }
+
+    public void RotateObject()
+    {
+        pendingObject.transform.Rotate(Vector3.up, rotateAmount, Space.World);
+    }
+
+    public void SelectObject(int index)//int index tells which object to select from prefab
+    {
+        if (pendingObject != null) //when you switch from cube to sphere the old preview dissapears
+            Destroy(pendingObject)
+;        pendingObject = Instantiate(objects[index], pos, transform.rotation);//grabs prefab from aray, creates clone, gives rotation from private float
+    }
+
+    public void ToggleGrid()
+    {
+        gridOn = gridToggle != null && gridToggle.isOn; //is to switch the checkbox on and off from snapping 
+    }
+
+    float RoundToNearestGrid(float pos) //its to lock it to nearest grid line no decimals 
+    {
+        float xDiff = pos % GridSize; //finding out how far it is from the last grid 
+        pos -= xDiff;
+        if(xDiff > (GridSize / 2))
+        {
+            pos += GridSize;
+        }
+
+        return pos;
+    }
+
+    
+
+
+}
